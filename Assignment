@@ -1,0 +1,143 @@
+#include <GL/glut.h>
+#include <cmath>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
+
+float planetRotation = 0.0f;
+float satelliteOrbit = 0.0f;
+float shardPulse = 0.0f;
+
+void initLighting() {
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_LIGHT1);
+
+    GLfloat light0_pos[] = { 5.0f, 8.0f, 10.0f, 1.0f };
+    GLfloat light1_pos[] = { -5.0f, -6.0f, 3.0f, 1.0f };
+
+    GLfloat white[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+    glLightfv(GL_LIGHT0, GL_POSITION, light0_pos);
+    glLightfv(GL_LIGHT1, GL_POSITION, light1_pos);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, white);
+    glLightfv(GL_LIGHT1, GL_DIFFUSE, white);
+
+    glEnable(GL_COLOR_MATERIAL);
+}
+
+void setMaterial(float r, float g, float b, float shininess = 50.0f) {
+    GLfloat specular[] = { 1.0, 1.0, 1.0, 1.0 };
+    glMaterialfv(GL_FRONT, GL_SPECULAR, specular);
+    glMaterialf(GL_FRONT, GL_SHININESS, shininess);
+    glColor3f(r, g, b);
+}
+
+void drawCrystalPlanet() {
+    setMaterial(0.4f, 0.9f, 1.0f, 90.0f);
+    glutSolidSphere(2.0f, 30, 30);
+}
+
+void drawSatellite() {
+    setMaterial(0.8f, 0.8f, 0.8f);
+    glBegin(GL_TRIANGLES);
+    glVertex3f(0, 0.5, 0);
+    glVertex3f(-0.5, -0.5, 0.5);
+    glVertex3f(0.5, -0.5, 0.5);
+    glEnd();
+
+    glBegin(GL_QUADS);
+    glVertex3f(-0.3, -0.5, 0.5);
+    glVertex3f(0.3, -0.5, 0.5);
+    glVertex3f(0.3, -0.8, 0.5);
+    glVertex3f(-0.3, -0.8, 0.5);
+    glEnd();
+}
+
+void drawFloatingShards() {
+    glPointSize(3.0f);
+    setMaterial(0.9f, 0.9f, 1.0f);
+    glBegin(GL_POINTS);
+    for (int i = 0; i < 100; ++i) {
+        float angle = i * 2 * M_PI / 100;
+        float radius = 5.0f + sin(shardPulse + i * 0.1f);
+        glVertex3f(radius * cos(angle), sin(angle * 2) * 2.0f, radius * sin(angle));
+    }
+    glEnd();
+}
+
+void display() {
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glLoadIdentity();
+    gluLookAt(6.0, 4.0, 12.0, 0, 0, 0, 0, 1, 0);
+
+    // Floating Shards
+    drawFloatingShards();
+
+    // Heart of the Galaxy
+    glPushMatrix();
+    setMaterial(1.0f, 0.3f, 0.0f, 100.0f);
+    glutSolidSphere(0.5, 20, 20);
+    glPopMatrix();
+
+    // Rotating Crystal Planet
+    glPushMatrix();
+    glRotatef(planetRotation, 0, 1, 0);
+    drawCrystalPlanet();
+    glPopMatrix();
+
+    // Orbiting Satellites
+    for (int i = 0; i < 2; ++i) {
+        float angle = satelliteOrbit + i * 180;
+        float x = 4.0f * cos(angle * M_PI / 180);
+        float z = 4.0f * sin(angle * M_PI / 180);
+        glPushMatrix();
+        glTranslatef(x, 0.0f, z);
+        glRotatef(angle, 0, 1, 0);
+        drawSatellite();
+        glPopMatrix();
+    }
+
+    glutSwapBuffers();
+}
+
+void idle() {
+    planetRotation += 0.2f;
+    satelliteOrbit += 0.5f;
+    shardPulse += 0.02f;
+
+    if (planetRotation > 360) planetRotation -= 360;
+    if (satelliteOrbit > 360) satelliteOrbit -= 360;
+
+    glutPostRedisplay();
+}
+
+void reshape(int w, int h) {
+    if (h == 0) h = 1;
+    float aspect = (float)w / h;
+    glViewport(0, 0, w, h);
+
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(45.0, aspect, 1.0, 100.0);
+
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+}
+
+int main(int argc, char** argv) {
+    glutInit(&argc, argv);
+    glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
+    glutInitWindowSize(1000, 800);
+    glutCreateWindow(" The Crystal Planet");
+
+    glEnable(GL_DEPTH_TEST);
+    initLighting();
+
+    glutDisplayFunc(display);
+    glutReshapeFunc(reshape);
+    glutIdleFunc(idle);
+
+    glutMainLoop();
+    return 0;
+}
